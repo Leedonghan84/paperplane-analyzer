@@ -7,8 +7,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
-# 한글 폰트 설정 (윈도우 기준)
-matplotlib.rcParams['font.family'] = 'Malgun Gothic'
+# ✅ 한글 깨짐 방지용 폰트 설정 (NanumGothic 사용)
+matplotlib.rcParams['font.family'] = 'NanumGothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.title("🛩️ 종이컵 비행기 실험 데이터 분석기")
@@ -64,11 +64,18 @@ if uploaded_file:
         # 🔹 변수와 비행성능의 관계 시각화
         st.subheader("📉 독립변수 vs 비행성능 (F.P)")
         selected_feature = st.selectbox("변수를 선택하세요", feature_cols)
+
+        # 산점도 + 회귀선
         fig3, ax3 = plt.subplots()
-        sns.scatterplot(data=df, x=selected_feature, y="F.P", ax=ax3)
+        sns.regplot(data=df, x=selected_feature, y="F.P", ax=ax3,
+                    scatter_kws={"alpha": 0.6}, line_kws={"color": "red"})
         ax3.set_xlabel(selected_feature)
         ax3.set_ylabel("비행성능 (F.P)")
         st.pyplot(fig3)
+
+        # 상관계수 계산
+        corr = df[selected_feature].corr(df["F.P"])
+        st.caption(f"📈 상관계수 (Pearson r): {corr:.2f}")
 
         # 🔹 예측 입력
         st.subheader("🧪 새 조건 입력 → 비행성능 예측")
@@ -81,3 +88,4 @@ if uploaded_file:
 
     except Exception as e:
         st.error(f"❌ 오류 발생: {e}")
+
