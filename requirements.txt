@@ -1,7 +1,7 @@
 streamlit
 pandas
-numpy
+openpyxl
 matplotlib
 seaborn
 scikit-learn
-openpyxl
+fonttools  # ✅ 폰트 관련 내부 처리용
