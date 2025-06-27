@@ -13,9 +13,12 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score
 
 # ✅ 한글 폰트 설정 (Streamlit Cloud 호환)
-font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
-font_name = fm.FontProperties(fname=font_path).get_name()
-matplotlib.rc('font', family=font_name)
+try:
+    font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+    font_name = fm.FontProperties(fname=font_path).get_name()
+    matplotlib.rc('font', family=font_name)
+except:
+    matplotlib.rcParams['font.family'] = 'Malgun Gothic'  # 또는 Arial 등 기본 폰트
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.title("✈️ 비행기 실험 데이터 분석기")
