@@ -127,19 +127,31 @@ default_target = target_candidates[0] if target_candidates else columns[-1]
 target_col = st.selectbox("🎯 예측할 종속변수", columns, index=columns.index(default_target))
 feature_cols = st.multiselect("🧪 독립변수(입력값)", [c for c in columns if c != target_col], default=[c for c in columns if c != target_col])
 
-model_option = st.radio("모델 선택", ["선형회귀", "랜덤포레스트"])
+st.sidebar.subheader("🧠 모델 설정")
+model_option = st.sidebar.selectbox("머신러닝 알고리즘 선택", ["선형회귀", "랜덤포레스트"])
+tuning = st.sidebar.checkbox("튜닝 사용", value=(model_option == "랜덤포레스트"))
+kfolds = st.sidebar.slider("K-Fold 수 (교차검증)", 2, 10, 5)
+
+if model_option == "랜덤포레스트" and tuning:
+    n_estimators = st.sidebar.slider("n_estimators", 10, 300, 100, 10)
+    max_depth = st.sidebar.slider("max_depth", 1, 30, 5)
+else:
+    n_estimators = 100
+    max_depth = None
 X = df[feature_cols]
 y = df[target_col]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-model = LinearRegression() if model_option == "선형회귀" else RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+model = LinearRegression() if model_option == "선형회귀" else RandomForestRegressor(
+    n_estimators=n_estimators, max_depth=max_depth, random_state=42
+)
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 
 r2 = r2_score(y_test, y_pred)
-rmse = mean_squared_error(y_test, y_pred, squared=False)
+rmse = mean_squared_error(y_test, y_pred) ** 0.5
 mae = mean_absolute_error(y_test, y_pred)
-cv_score = cross_val_score(model, X, y, cv=5, scoring='r2').mean()
+cv_score = cross_val_score(model, X, y, cv=kfolds, scoring='r2').mean()
 
 st.success(f"✅ 테스트 R²: {r2:.2f} | RMSE: {rmse:.2f} | MAE: {mae:.2f} | 교차검증 R² 평균: {cv_score:.2f}")
 
