@@ -1,39 +1,38 @@
-# streamlit_app.py
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.font_manager as fm
-import os
+import matplotlib
 import io
+import os
+
 from openpyxl import Workbook
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-import numpy as np
 
-# ✅ 한글 폰트 설정
-font_path = "./NanumGothic.ttf"  # 프로젝트 루트에 위치
+# ✅ 한글 폰트 설정 (NanumGothic.ttf 파일을 프로젝트 루트에 위치)
+font_path = "./NanumGothic.ttf"
 if os.path.exists(font_path):
-    font_name = fm.FontProperties(fname=font_path).get_name()
-    plt.rcParams["font.family"] = font_name
-    sns.set(font=font_name)
-    st.caption(f"✅ 폰트 설정됨: {font_name}")
+    font_prop = fm.FontProperties(fname=font_path)
+    font_name = font_prop.get_name()
+    plt.rcParams['font.family'] = font_name
+    matplotlib.rcParams['font.family'] = font_name
+    st.markdown(f"✅ 폰트 설정됨: `{font_name}`")
 else:
-    plt.rcParams["font.family"] = "Malgun Gothic"
-    sns.set(font="Malgun Gothic")
-    st.warning("⚠️ NanumGothic.ttf 폰트를 찾을 수 없어 기본 폰트로 설정됩니다.")
+    st.warning("⚠️ NanumGothic.ttf 파일이 없어 기본 폰트로 설정됩니다.")
+    matplotlib.rcParams['font.family'] = ['Malgun Gothic', 'AppleGothic', 'Arial']
 
-plt.rcParams["axes.unicode_minus"] = False
+matplotlib.rcParams['axes.unicode_minus'] = False
 
-# 앱 제목
 st.title("✈️ 비행기 실험 데이터 분석기")
 
-# 실험 종류 선택
 experiment = st.selectbox("🔬 실험 종류를 선택하세요", ["종이컵 비행기", "고리 비행기", "직접 업로드"])
 
-# 엑셀 양식 생성
+# ✅ 샘플 엑셀 자동 생성
 def generate_excel_with_two_sheets(experiment):
     wb = Workbook()
     ws_analysis = wb.active
@@ -92,51 +91,46 @@ def generate_excel_with_two_sheets(experiment):
     stream.seek(0)
     return stream
 
-# 📥 샘플 엑셀 다운로드
+# ✅ 샘플 다운로드 버튼
 if experiment in ["종이컵 비행기", "고리 비행기"]:
-    file_name = f"{experiment}_자동_양식.xlsx"
+    file_name = f"{experiment}_샘플_양식.xlsx"
     towrite = generate_excel_with_two_sheets(experiment)
-    st.download_button(
-        label="📥 샘플 엑셀 양식 다운로드",
-        data=towrite,
-        file_name=file_name,
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    st.download_button("📥 샘플 엑셀 양식 다운로드", data=towrite, file_name=file_name, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-# 📂 엑셀 업로드
+# ✅ 엑셀 업로드
 uploaded_file = st.file_uploader("📂 실험 엑셀 업로드 (분석용 데이터 시트 포함)", type=["xlsx"])
-if not uploaded_file:
+
+if uploaded_file:
+    try:
+        df = pd.read_excel(uploaded_file, sheet_name="분석용 데이터")
+        df.columns = df.columns.str.replace("\n", " ").str.strip()
+        df = df.select_dtypes(include=['number']).dropna()
+    except Exception as e:
+        st.error("❌ '분석용 데이터' 시트를 불러오는 데 실패했습니다.")
+        st.stop()
+else:
     st.stop()
 
-try:
-    df = pd.read_excel(uploaded_file, sheet_name="분석용 데이터")
-except Exception:
-    st.error("❌ '분석용 데이터' 시트를 찾을 수 없습니다.")
-    st.stop()
-
-# 전처리
-df.columns = df.columns.str.replace("\n", " ").str.strip()
-df = df.select_dtypes(include=['number']).dropna()
-
-# 📊 데이터 미리보기
 st.subheader("📋 데이터 미리보기")
 st.dataframe(df)
 
-# 🎯 종속변수/독립변수 선택
+# ✅ 변수 선택
 columns = df.columns.tolist()
-default_target = next((c for c in columns if '성능' in c), columns[-1])
-target_col = st.selectbox("🎯 종속변수 (예측할 값)", columns, index=columns.index(default_target))
-feature_cols = st.multiselect("🧪 독립변수", [c for c in columns if c != target_col], default=[c for c in columns if c != target_col])
+target_candidates = [c for c in columns if '성능' in c or '평균' in c or c.lower() in ['target', 'y']]
+default_target = target_candidates[0] if target_candidates else columns[-1]
 
-# 🧠 모델 설정
+target_col = st.selectbox("🎯 예측할 종속변수", columns, index=columns.index(default_target))
+feature_cols = st.multiselect("🧪 독립변수(입력값)", [c for c in columns if c != target_col], default=[c for c in columns if c != target_col])
+
+# ✅ 모델 선택 및 하이퍼파라미터
 st.sidebar.subheader("🧠 모델 설정")
 model_option = st.sidebar.selectbox("머신러닝 알고리즘 선택", ["선형회귀", "랜덤포레스트"])
-tuning = st.sidebar.checkbox("튜닝", value=(model_option == "랜덤포레스트"))
+tuning = st.sidebar.checkbox("튜닝 사용", value=(model_option == "랜덤포레스트"))
 kfolds = st.sidebar.slider("K-Fold 수 (교차검증)", 2, 10, 5)
 
 if model_option == "랜덤포레스트" and tuning:
-    n_estimators = st.sidebar.slider("n_estimators", 10, 200, 100, 10)
-    max_depth = st.sidebar.slider("max_depth", 1, 20, 5)
+    n_estimators = st.sidebar.slider("n_estimators", 10, 300, 100, 10)
+    max_depth = st.sidebar.slider("max_depth", 1, 30, 5)
 else:
     n_estimators = 100
     max_depth = None
@@ -152,48 +146,43 @@ else:
 
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
-
 r2 = r2_score(y_test, y_pred)
 rmse = mean_squared_error(y_test, y_pred) ** 0.5
 mae = mean_absolute_error(y_test, y_pred)
 cv_score = cross_val_score(model, X, y, cv=kfolds, scoring='r2').mean()
 
-st.success(f"✅ 테스트셋 R²: {r2:.2f} | RMSE: {rmse:.2f} | MAE: {mae:.2f} | 교차검증 R² 평균: {cv_score:.2f}")
+st.success(f"✅ 테스트 R²: {r2:.2f} | RMSE: {rmse:.2f} | MAE: {mae:.2f} | 교차검증 R² 평균: {cv_score:.2f}")
 
-# 📈 예측 vs 실제
+# ✅ 실제 vs 예측 시각화
 st.subheader("📈 예측 vs 실제")
-full_pred = model.predict(X)
 fig1, ax1 = plt.subplots()
-sns.regplot(x=full_pred, y=y, ax=ax1, ci=95, line_kws={"color": "blue"})
-ax1.set_xlabel("모델 예측값")
-ax1.set_ylabel(f"실제값 ({target_col})")
+sns.regplot(x=model.predict(X), y=y, ax=ax1, ci=95, line_kws={"color": "blue"})
+ax1.set_xlabel("예측값")
+ax1.set_ylabel("실제값")
 fig1.tight_layout()
 st.pyplot(fig1)
 
-# 📉 독립변수 관계 시각화
-st.subheader("📉 독립변수별 관계 시각화")
-selected_feature = st.selectbox("📌 분석할 독립변수 선택", feature_cols)
+# ✅ 독립변수별 관계 시각화
+st.subheader("📉 독립변수별 성능 관계")
+selected_feature = st.selectbox("🔍 분석할 변수 선택", feature_cols)
 fig2, ax2 = plt.subplots()
-sns.scatterplot(data=df, x=selected_feature, y=target_col, ax=ax2)
-sns.regplot(data=df, x=selected_feature, y=target_col, ax=ax2, scatter=False, line_kws={"color": "red"})
-ax2.set_xlabel(selected_feature)
-ax2.set_ylabel(target_col)
+sns.scatterplot(x=selected_feature, y=target_col, data=df, ax=ax2)
+sns.regplot(x=selected_feature, y=target_col, data=df, ax=ax2, scatter=False, line_kws={"color": "red"})
 fig2.tight_layout()
 st.pyplot(fig2)
 
-# 📌 변수 중요도
+# ✅ 변수 중요도 시각화
 if model_option == "랜덤포레스트":
     st.subheader("📌 변수 중요도")
-    importances = model.feature_importances_
-    importance_df = pd.DataFrame({"변수": X.columns, "중요도": importances}).sort_values(by="중요도", ascending=False)
+    importance_df = pd.DataFrame({"변수": X.columns, "중요도": model.feature_importances_}).sort_values(by="중요도", ascending=False)
     fig3, ax3 = plt.subplots()
     sns.barplot(data=importance_df, x="중요도", y="변수", ax=ax3)
     fig3.tight_layout()
     st.pyplot(fig3)
 
-# 🧪 사용자 입력 예측
+# ✅ 사용자 입력 예측
 st.subheader("🧪 새 조건 입력 → 예측값")
-input_data = {col: st.number_input(col, value=float(X[col].mean())) for col in feature_cols}
+input_data = {col: st.number_input(f"{col}", value=float(X[col].mean())) for col in feature_cols}
 input_df = pd.DataFrame([input_data])
 prediction = model.predict(input_df)[0]
 st.success(f"📊 예측 결과: {prediction:.2f}")
