@@ -1,16 +1,21 @@
+# streamlit_flight_analyzer.py
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib
+import matplotlib.font_manager as fm
 import io
+from openpyxl import Workbook
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score
-from openpyxl import Workbook
 
-matplotlib.rcParams['font.family'] = 'NanumGothic'
+# ✅ 한글 폰트 설정 (Streamlit Cloud 호환)
+font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+font_name = fm.FontProperties(fname=font_path).get_name()
+matplotlib.rc('font', family=font_name)
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.title("✈️ 비행기 실험 데이터 분석기")
@@ -86,7 +91,7 @@ if experiment in ["종이컵 비행기", "고리 비행기"]:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# 파일 업로드 처리
+# 📂 파일 업로드
 if experiment == "종이컵 비행기":
     uploaded_file = st.file_uploader("📂 종이컵 비행기 엑셀 업로드 (분석용 데이터 시트)", type=["xlsx"], key="cup")
 elif experiment == "고리 비행기":
@@ -94,7 +99,7 @@ elif experiment == "고리 비행기":
 else:
     uploaded_file = st.file_uploader("📂 엑셀 파일 업로드 (자유 형식)", type=["xlsx"], key="custom")
 
-# 데이터 처리
+# 데이터 로딩 및 전처리
 if uploaded_file:
     df = pd.read_excel(uploaded_file, sheet_name="분석용 데이터")
     df.columns = df.columns.str.replace("\n", " ").str.strip()
@@ -105,16 +110,17 @@ else:
 st.subheader("📋 데이터 미리보기")
 st.dataframe(df)
 
-# 종속/독립 변수 선택
+# 🎯 변수 선택
 columns = df.columns.tolist()
 default_target = next((c for c in columns if '성능' in c or c.lower() in ['f.p', 'target', 'y', '평균값']), columns[-1])
 target_col = st.selectbox("🎯 종속변수(예측할 값)", columns, index=columns.index(default_target))
 feature_cols = st.multiselect("🧪 독립변수(입력값)", [c for c in columns if c != target_col], default=[c for c in columns if c != target_col])
 
-# 모델 설정
+# 🧠 모델 설정 + 교차검증
 st.sidebar.subheader("🧠 모델 설정")
 model_option = st.sidebar.selectbox("머신러닝 알고리즘 선택", ["선형회귀", "랜덤포레스트"])
 tuning = st.sidebar.checkbox("튜닝", value=(model_option == "랜덤포레스트"))
+kfolds = st.sidebar.slider("K-Fold 수 (교차검증)", 2, 10, 5)
 
 if model_option == "랜덤포레스트" and tuning:
     n_estimators = st.sidebar.slider("n_estimators", 10, 200, 100, 10)
@@ -123,7 +129,6 @@ else:
     n_estimators = 100
     max_depth = None
 
-# 학습
 X = df[feature_cols]
 y = df[target_col]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
@@ -136,9 +141,12 @@ else:
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 r2 = r2_score(y_test, y_pred)
-st.success(f"✅ 모델 R² 점수: {r2:.2f}")
+cv_scores = cross_val_score(model, X, y, cv=kfolds, scoring='r2')
+mean_cv_score = cv_scores.mean()
 
-# 예측 vs 실제
+st.success(f"✅ 테스트셋 R² 점수: {r2:.2f}  |  교차검증 평균 R²: {mean_cv_score:.2f}")
+
+# 📈 예측 vs 실제
 st.subheader("📈 실제값 vs 예측값")
 full_pred = model.predict(X)
 fig1, ax1 = plt.subplots()
@@ -147,7 +155,17 @@ ax1.set_xlabel("모델이 예측한 값")
 ax1.set_ylabel(f"실제값 ({target_col})")
 st.pyplot(fig1)
 
-# 변수 중요도 (랜덤포레스트만)
+# 📉 독립변수 관계 시각화
+st.subheader("📉 독립변수별 비행성능 관계 시각화")
+selected_feature = st.selectbox("📌 분석할 독립 변수 선택", feature_cols)
+fig3, ax3 = plt.subplots()
+sns.scatterplot(data=df, x=selected_feature, y=target_col, ax=ax3)
+sns.regplot(data=df, x=selected_feature, y=target_col, ax=ax3, scatter=False, line_kws={"color": "red"})
+ax3.set_xlabel(selected_feature)
+ax3.set_ylabel(target_col)
+st.pyplot(fig3)
+
+# 📌 변수 중요도
 if model_option == "랜덤포레스트":
     st.subheader("📌 변수 중요도")
     importance_df = pd.DataFrame({"변수": X.columns, "중요도": model.feature_importances_})
@@ -156,7 +174,7 @@ if model_option == "랜덤포레스트":
     sns.barplot(data=importance_df, x="중요도", y="변수", ax=ax2)
     st.pyplot(fig2)
 
-# 입력값 예측
+# 🧪 사용자 입력 예측
 st.subheader("🧪 새 조건 입력 → 예측값")
 input_data = {}
 for col in feature_cols:
