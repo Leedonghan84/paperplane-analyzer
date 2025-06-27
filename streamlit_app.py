@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seab as sns
 import matplotlib
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
@@ -18,27 +18,28 @@ st.title("✈️ 비행기 실험 데이터 분석기")
 # 실험 종류 선택
 experiment = st.selectbox("🔬 실험 종류를 선택하세요", ["종이컵 비행기", "고리 비행기", "직접 업로드"])
 
-# 샘플 데이터 또는 업로드 처리
+# 파일 업로드 처리
 if experiment == "종이컵 비행기":
-    sample_file = "종이컵 비행기 데이터(캠프) (2).xlsx"
-    df = pd.read_excel(sample_file)
+    st.info("샘플 엑셀 파일을 업로드해주세요 (예: 종이컵 비행기 데이터)")
+    uploaded_file = st.file_uploader("📂 엑셀 파일 업로드", type=["xlsx"], key="cup")
 elif experiment == "고리 비행기":
-    sample_file = "0627고리만들기 엑셀 (1).xlsx"
-    df = pd.read_excel(sample_file)
-    df.columns = df.columns.str.replace("\n", " ").str.strip()  # 줄바꿈 제거 및 공백 제거
-    df = df.select_dtypes(include=['number']).dropna()  # 숫자형만 추출
+    st.info("샘플 엑셀 파일을 업로드해주세요 (예: 고리 비행기 데이터)")
+    uploaded_file = st.file_uploader("📂 엑셀 파일 업로드", type=["xlsx"], key="gori")
 else:
-    uploaded_file = st.file_uploader("📂 엑셀 파일 업로드", type=["xlsx"])
-    if uploaded_file:
-        df = pd.read_excel(uploaded_file)
-        df.columns = df.columns.str.replace("\n", " ").str.strip()
-    else:
-        st.stop()
+    uploaded_file = st.file_uploader("📂 엑셀 파일 업로드", type=["xlsx"], key="custom")
+
+# 데이터 처리
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
+    df.columns = df.columns.str.replace("\n", " ").str.strip()
+    df = df.select_dtypes(include=['number']).dropna()
+else:
+    st.stop()
 
 st.subheader("📋 데이터 미리보기")
 st.dataframe(df)
 
-# 종속 변수 자동 추정
+# 종속/독립 변수 선택
 columns = df.columns.tolist()
 default_target = next((c for c in columns if '성능' in c or c.lower() in ['f.p', 'target', 'y', '평균값']), columns[-1])
 target_col = st.selectbox("🎯 종속변수(예측할 값)", columns, index=columns.index(default_target))
