@@ -12,14 +12,15 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 import numpy as np
+import os
 
-# ✅ 한글 폰트 설정 (Streamlit Cloud 호환)
-try:
-    font_path = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+# ✅ 한글 폰트 설정 (직접 업로드된 폰트 사용)
+font_path = "./NanumGothic.ttf"  # 같은 디렉토리에 폰트 파일을 업로드
+if os.path.exists(font_path):
     font_name = fm.FontProperties(fname=font_path).get_name()
     matplotlib.rc('font', family=font_name)
-except:
-    matplotlib.rcParams['font.family'] = 'Malgun Gothic'  # 또는 Arial 등 기본 폰트
+else:
+    matplotlib.rcParams['font.family'] = ['Malgun Gothic', 'AppleGothic', 'Arial']
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.title("✈️ 비행기 실험 데이터 분석기")
