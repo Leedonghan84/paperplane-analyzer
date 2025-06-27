@@ -34,7 +34,8 @@ def generate_excel_with_two_sheets(experiment):
             "안쪽 지름(cm)", "바깥쪽 지름(cm)", "반너비(cm)", "고무줄 감은 횟수",
             "고무줄 늘어난 길이(cm)", "무게(g)", "날리는 높이(cm)", "비행성능"
         ]
-        for i in range(2, 7):
+        ws_analysis.append(analysis_cols)
+        for i in range(2, 102):
             row = []
             for col in analysis_cols:
                 if col == "비행성능":
@@ -44,8 +45,6 @@ def generate_excel_with_two_sheets(experiment):
                     col_letter = chr(65 + col_index)
                     row.append(f"='원본 데이터'!{col_letter}{i}")
             ws_analysis.append(row)
-        ws_analysis.insert_rows(1)
-        ws_analysis.append(analysis_cols)
         ws_input.append(input_cols)
 
     elif experiment == "고리 비행기":
@@ -59,7 +58,8 @@ def generate_excel_with_two_sheets(experiment):
             "앞 쪽 고리 지름(cm)", "앞 쪽 고리 두께(cm)", "뒤 쪽 고리 지름(cm)", "뒤 쪽 고리 두께(cm)",
             "질량(g)", "고무줄늘어난길이(cm)", "비행성능"
         ]
-        for i in range(2, 7):
+        ws_analysis.append(analysis_cols)
+        for i in range(2, 102):
             row = []
             for col in analysis_cols:
                 if col == "비행성능":
@@ -69,8 +69,6 @@ def generate_excel_with_two_sheets(experiment):
                     col_letter = chr(65 + col_index)
                     row.append(f"='원본 데이터'!{col_letter}{i}")
             ws_analysis.append(row)
-        ws_analysis.insert_rows(1)
-        ws_analysis.append(analysis_cols)
         ws_input.append(input_cols)
 
     stream = io.BytesIO()
