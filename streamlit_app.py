@@ -99,3 +99,23 @@ def generate_excel_with_two_sheets(experiment):
     wb.save(stream)
     stream.seek(0)
     return stream
+
+# 엑셀 템플릿 다운로드 버튼
+if experiment in ["종이컵 비행기", "고리 비행기"]:
+    file_name = f"{experiment}_샘플_양식.xlsx"
+    towrite = generate_excel_with_two_sheets(experiment)
+    st.download_button("📥 샘플 엑셀 양식 다운로드", data=towrite, file_name=file_name, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+# 엑셀 파일 업로드
+uploaded_file = st.file_uploader("📂 실험 엑셀 업로드 (분석용 데이터 시트 포함)", type=["xlsx"])
+
+if not uploaded_file:
+    st.stop()
+
+try:
+    df = pd.read_excel(uploaded_file, sheet_name="분석용 데이터")
+    df.columns = df.columns.str.replace("\n", " ").str.strip()
+    df = df.select_dtypes(include=['number']).dropna()
+except Exception:
+    st.error("❌ '분석용 데이터' 시트를 불러오는 데 실패했습니다.")
+    st.stop()
