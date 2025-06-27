@@ -1,4 +1,8 @@
+import streamlit as st
+
+# 실험 종류 선택
 experiment = st.selectbox("🔬 실험 종류를 선택하세요", ["종이컵 비행기", "고리 비행기", "직접 업로드"])
+
 # 샘플 양식 제공
 if experiment == "종이컵 비행기":
     with open("종이컵_비행기_자동_양식.xlsx", "rb") as f:
