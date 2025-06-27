@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seab as sns
+import seaborn as sns
 import matplotlib
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
