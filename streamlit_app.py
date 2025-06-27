@@ -29,18 +29,18 @@ else:
 
 matplotlib.rcParams['axes.unicode_minus'] = False
 
-# 잘못된 문자 제거 함수함수
+# 잘못된 문자 제거 함수
 
 def remove_illegal_characters(s):
     if isinstance(s, str):
         return re.sub(r'[\x00-\x1F]', '', s)
     return s
 
-st.title("\u2708\ufe0f \ube44\ud589\uae30 \uc2e4\ud5d8 \ub370\uc774\ud130 \ubd84\uc11d\uae30")
+st.title("✈️ 비행기 실험 데이터 분석기")
 
-experiment = st.selectbox("\ud83d\udd2c \uc2e4\ud5d8 \uc885\ub958\ub97c \uc120\ud0dd\ud558\uc138\uc694", ["\uc885\uc774\ucef9 \ube44\ud589\uae30", "\uace0\ub9ac \ube44\ud589\uae30", "\uc9c1\uc811 \uc5c5\ub85c\ub4dc"])
+experiment = st.selectbox("🔬 실험 종류를 선택하세요", ["종이컵 비행기", "고리 비행기", "직접 업로드"])
 
-# \uc0c1\uc2e4 \ub370\uc774\ud130 \uc0dd\uc131
+# 데이터 시트 생성
 
 def generate_excel_with_two_sheets(experiment):
     wb = Workbook()
