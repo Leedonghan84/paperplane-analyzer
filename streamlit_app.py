@@ -1,43 +1,16 @@
-# streamlit_flight_analyzer.py
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib
-import io
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score
-
-# 폰트 설정 (한글 깨짐 방지)
-matplotlib.rcParams['font.family'] = 'NanumGothic'
-matplotlib.rcParams['axes.unicode_minus'] = False
-
-st.title("✈️ 비행기 실험 데이터 분석기")
-
-# 실험 종류 선택
-experiment = st.selectbox("🔬 실험 종류를 선택하세요", ["종이컵 비행기", "고리 비행기", "직접 업로드"])
-
 # 샘플 양식 제공
 if experiment == "종이컵 비행기":
-    sample_df = pd.DataFrame({
-        "I.D": [5.2], "O.D": [7.5], "H.W": [9.4], "R.B.T": [3],
-        "R.B.S.L": [70], "W": [14.89], "L.H": [136.8], "L.A": [45], "F.P": [9.61]
-    })
-    file_name = "sample_cup.xlsx"
+    with open("종이컵_비행기_자동_양식.xlsx", "rb") as f:
+        sample_bytes = f.read()
+    file_name = "종이컵_비행기_자동_양식.xlsx"
 elif experiment == "고리 비행기":
-    sample_df = pd.DataFrame({
-        "앞 쪽 고리 지름(cm)": [5.2], "뒤 쪽 고리 지름(cm)": [7.5], "질량(g)": [9.4],
-        "고무줄늘어난길이(cm)": [70], "비행성능1": [6.0], "비행성능2": [7.5], "비행성능3": [8.2],
-        "비행성능4": [11.2], "비행성능5": [14.4], "평균값": [9.6]
-    })
-    sample_df.columns = [col.replace(" ", "\n") for col in sample_df.columns]
-    file_name = "sample_gori.xlsx"
+    with open("고리_비행기_자동_양식.xlsx", "rb") as f:
+        sample_bytes = f.read()
+    file_name = "고리_비행기_자동_양식.xlsx"
 
 if experiment in ["종이컵 비행기", "고리 비행기"]:
     towrite = io.BytesIO()
-    sample_df.to_excel(towrite, index=False, engine="openpyxl")
+    towrite.write(sample_bytes)
     towrite.seek(0)
     st.download_button(
         label="📥 샘플 엑셀 양식 다운로드",
