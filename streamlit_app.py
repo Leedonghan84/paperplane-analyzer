@@ -30,7 +30,6 @@ else:
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 # 잘못된 문자 제거 함수
-
 def remove_illegal_characters(s):
     if isinstance(s, str):
         return re.sub(r'[\x00-\x1F]', '', s)
@@ -41,7 +40,6 @@ st.title("✈️ 비행기 실험 데이터 분석기")
 experiment = st.selectbox("🔬 실험 종류를 선택하세요", ["종이컵 비행기", "고리 비행기", "직접 업로드"])
 
 # 데이터 시트 생성
-
 def generate_excel_with_two_sheets(experiment):
     wb = Workbook()
     ws_analysis = wb.active
@@ -119,3 +117,59 @@ try:
 except Exception:
     st.error("❌ '분석용 데이터' 시트를 불러오는 데 실패했습니다.")
     st.stop()
+
+# 분석 시작
+st.subheader("📊 분석 결과")
+columns = df.columns.tolist()
+target_candidates = [c for c in columns if '성능' in c or '평균' in c or c.lower() in ['target', 'y']]
+default_target = target_candidates[0] if target_candidates else columns[-1]
+
+target_col = st.selectbox("🎯 예측할 종속변수", columns, index=columns.index(default_target))
+feature_cols = st.multiselect("🧪 독립변수(입력값)", [c for c in columns if c != target_col], default=[c for c in columns if c != target_col])
+
+model_option = st.radio("모델 선택", ["선형회귀", "랜덤포레스트"])
+X = df[feature_cols]
+y = df[target_col]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+model = LinearRegression() if model_option == "선형회귀" else RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+r2 = r2_score(y_test, y_pred)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+mae = mean_absolute_error(y_test, y_pred)
+cv_score = cross_val_score(model, X, y, cv=5, scoring='r2').mean()
+
+st.success(f"✅ 테스트 R²: {r2:.2f} | RMSE: {rmse:.2f} | MAE: {mae:.2f} | 교차검증 R² 평균: {cv_score:.2f}")
+
+# 시각화: 예측 vs 실제
+st.subheader("📈 예측 vs 실제")
+fig1, ax1 = plt.subplots()
+sns.regplot(x=model.predict(X), y=y, ax=ax1, ci=95, line_kws={"color": "blue"})
+ax1.set_xlabel("예측값")
+ax1.set_ylabel("실제값")
+st.pyplot(fig1)
+
+# 시각화: 독립변수별 관계
+st.subheader("📉 독립변수별 성능 관계")
+selected_feature = st.selectbox("🔍 분석할 변수 선택", feature_cols)
+fig2, ax2 = plt.subplots()
+sns.scatterplot(x=selected_feature, y=target_col, data=df, ax=ax2)
+sns.regplot(x=selected_feature, y=target_col, data=df, ax=ax2, scatter=False, line_kws={"color": "red"})
+st.pyplot(fig2)
+
+# 변수 중요도
+if model_option == "랜덤포레스트":
+    st.subheader("📌 변수 중요도")
+    importance_df = pd.DataFrame({"변수": X.columns, "중요도": model.feature_importances_}).sort_values(by="중요도", ascending=False)
+    fig3, ax3 = plt.subplots()
+    sns.barplot(data=importance_df, x="중요도", y="변수", ax=ax3)
+    st.pyplot(fig3)
+
+# 사용자 입력 예측
+st.subheader("🧪 새 조건 입력 → 예측값")
+input_data = {col: st.number_input(f"{col}", value=float(X[col].mean())) for col in feature_cols}
+input_df = pd.DataFrame([input_data])
+prediction = model.predict(input_df)[0]
+st.success(f"📊 예측 결과: {prediction:.2f}")
