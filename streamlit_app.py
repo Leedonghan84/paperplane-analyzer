@@ -10,7 +10,8 @@ from openpyxl import Workbook
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import numpy as np
 
 # ✅ 한글 폰트 설정 (Streamlit Cloud 호환)
 try:
@@ -95,16 +96,16 @@ if experiment in ["종이컵 비행기", "고리 비행기"]:
     )
 
 # 📂 파일 업로드
-if experiment == "종이컵 비행기":
-    uploaded_file = st.file_uploader("📂 종이컵 비행기 엑셀 업로드 (분석용 데이터 시트)", type=["xlsx"], key="cup")
-elif experiment == "고리 비행기":
-    uploaded_file = st.file_uploader("📂 고리 비행기 엑셀 업로드 (분석용 데이터 시트)", type=["xlsx"], key="gori")
-else:
-    uploaded_file = st.file_uploader("📂 엑셀 파일 업로드 (자유 형식)", type=["xlsx"], key="custom")
+uploaded_file = st.file_uploader("📂 실험 엑셀 업로드 (분석용 데이터 시트 포함)", type=["xlsx"])
 
 # 데이터 로딩 및 전처리
 if uploaded_file:
-    df = pd.read_excel(uploaded_file, sheet_name="분석용 데이터")
+    try:
+        df = pd.read_excel(uploaded_file, sheet_name="분석용 데이터")
+    except Exception as e:
+        st.error(f"❌ '분석용 데이터' 시트를 찾을 수 없습니다.")
+        st.stop()
+
     df.columns = df.columns.str.replace("\n", " ").str.strip()
     df = df.select_dtypes(include=['number']).dropna()
 else:
@@ -115,7 +116,8 @@ st.dataframe(df)
 
 # 🎯 변수 선택
 columns = df.columns.tolist()
-default_target = next((c for c in columns if '성능' in c or c.lower() in ['f.p', 'target', 'y', '평균값']), columns[-1])
+def_target_candidates = [c for c in columns if '성능' in c or c.lower() in ['f.p', 'target', 'y', '평균값']]
+default_target = def_target_candidates[0] if def_target_candidates else columns[-1]
 target_col = st.selectbox("🎯 종속변수(예측할 값)", columns, index=columns.index(default_target))
 feature_cols = st.multiselect("🧪 독립변수(입력값)", [c for c in columns if c != target_col], default=[c for c in columns if c != target_col])
 
@@ -144,10 +146,12 @@ else:
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+mae = mean_absolute_error(y_test, y_pred)
 cv_scores = cross_val_score(model, X, y, cv=kfolds, scoring='r2')
 mean_cv_score = cv_scores.mean()
 
-st.success(f"✅ 테스트셋 R² 점수: {r2:.2f}  |  교차검증 평균 R²: {mean_cv_score:.2f}")
+st.success(f"✅ 테스트셋 R²: {r2:.2f} | RMSE: {rmse:.2f} | MAE: {mae:.2f} | 교차검증 R² 평균: {mean_cv_score:.2f}")
 
 # 📈 예측 vs 실제
 st.subheader("📈 실제값 vs 예측값")
