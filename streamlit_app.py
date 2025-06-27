@@ -15,11 +15,12 @@ import numpy as np
 import os
 
 # ✅ 한글 폰트 설정 (직접 업로드된 폰트 사용)
-font_path = "./NanumGothic.ttf"  # 같은 디렉토리에 폰트 파일을 업로드
+font_path = "./NanumGothic.ttf"  # 업로드된 경로
 if os.path.exists(font_path):
     font_name = fm.FontProperties(fname=font_path).get_name()
     matplotlib.rc('font', family=font_name)
 else:
+    st.warning("⚠️ NanumGothic.ttf 파일이 없어 기본 폰트로 설정됩니다.")
     matplotlib.rcParams['font.family'] = ['Malgun Gothic', 'AppleGothic', 'Arial']
 matplotlib.rcParams['axes.unicode_minus'] = False
 
@@ -161,6 +162,7 @@ fig1, ax1 = plt.subplots()
 sns.regplot(x=full_pred, y=y, ax=ax1, ci=95, line_kws={"color": "blue"})
 ax1.set_xlabel("모델이 예측한 값")
 ax1.set_ylabel(f"실제값 ({target_col})")
+fig1.tight_layout()
 st.pyplot(fig1)
 
 # 📉 독립변수 관계 시각화
@@ -171,6 +173,7 @@ sns.scatterplot(data=df, x=selected_feature, y=target_col, ax=ax3)
 sns.regplot(data=df, x=selected_feature, y=target_col, ax=ax3, scatter=False, line_kws={"color": "red"})
 ax3.set_xlabel(selected_feature)
 ax3.set_ylabel(target_col)
+fig3.tight_layout()
 st.pyplot(fig3)
 
 # 📌 변수 중요도
@@ -180,6 +183,7 @@ if model_option == "랜덤포레스트":
     importance_df = importance_df.sort_values(by="중요도", ascending=False)
     fig2, ax2 = plt.subplots()
     sns.barplot(data=importance_df, x="중요도", y="변수", ax=ax2)
+    fig2.tight_layout()
     st.pyplot(fig2)
 
 # 🧪 사용자 입력 예측
